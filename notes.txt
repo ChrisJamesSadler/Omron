@@ -1,0 +1,626 @@
+work on adding linked lists.
+using linked lists add each mutex to a list so we can search it later when killing a thread
+
+
+
+////////////////
+when we have multi cores, use the below code to point to a structure containing info about the cores
+extern void write_ident(uint32_t);
+extern uint32_t read_ident();
+
+
+
+
+#define ECX_SSE3                        (1 << 0)    // Streaming SIMD Extensions 3
+#define ECX_PCLMULQDQ                   (1 << 1)    // PCLMULQDQ Instruction
+#define ECX_DTES64                      (1 << 2)    // 64-Bit Debug Store Area
+#define ECX_MONITOR                     (1 << 3)    // MONITOR/MWAIT
+#define ECX_DS_CPL                      (1 << 4)    // CPL Qualified Debug Store
+#define ECX_VMX                         (1 << 5)    // Virtual Machine Extensions
+#define ECX_SMX                         (1 << 6)    // Safer Mode Extensions
+#define ECX_EST                         (1 << 7)    // Enhanced SpeedStep Technology
+#define ECX_TM2                         (1 << 8)    // Thermal Monitor 2
+#define ECX_SSSE3                       (1 << 9)    // Supplemental Streaming SIMD Extensions 3
+#define ECX_CNXT_ID                     (1 << 10)   // L1 Context ID
+#define ECX_FMA                         (1 << 12)   // Fused Multiply Add
+#define ECX_CX16                        (1 << 13)   // CMPXCHG16B Instruction
+#define ECX_XTPR                        (1 << 14)   // xTPR Update Control
+#define ECX_PDCM                        (1 << 15)   // Perf/Debug Capability MSR
+#define ECX_PCID                        (1 << 17)   // Process-context Identifiers
+#define ECX_DCA                         (1 << 18)   // Direct Cache Access
+#define ECX_SSE41                       (1 << 19)   // Streaming SIMD Extensions 4.1
+#define ECX_SSE42                       (1 << 20)   // Streaming SIMD Extensions 4.2
+#define ECX_X2APIC                      (1 << 21)   // Extended xAPIC Support
+#define ECX_MOVBE                       (1 << 22)   // MOVBE Instruction
+#define ECX_POPCNT                      (1 << 23)   // POPCNT Instruction
+#define ECX_TSC                         (1 << 24)   // Local APIC supports TSC Deadline
+#define ECX_AESNI                       (1 << 25)   // AESNI Instruction
+#define ECX_XSAVE                       (1 << 26)   // XSAVE/XSTOR States
+#define ECX_OSXSAVE                     (1 << 27)   // OS Enabled Extended State Management
+#define ECX_AVX                         (1 << 28)   // AVX Instructions
+#define ECX_F16C                        (1 << 29)   // 16-bit Floating Point Instructions
+#define ECX_RDRAND                      (1 << 30)   // RDRAND Instruction
+
+#define EDX_FPU                         (1 << 0)    // Floating-Point Unit On-Chip
+#define EDX_VME                         (1 << 1)    // Virtual 8086 Mode Extensions
+#define EDX_DE                          (1 << 2)    // Debugging Extensions
+#define EDX_PSE                         (1 << 3)    // Page Size Extension
+#define EDX_TSC                         (1 << 4)    // Time Stamp Counter
+#define EDX_MSR                         (1 << 5)    // Model Specific Registers
+#define EDX_PAE                         (1 << 6)    // Physical Address Extension
+#define EDX_MCE                         (1 << 7)    // Machine-Check Exception
+#define EDX_CX8                         (1 << 8)    // CMPXCHG8 Instruction
+#define EDX_APIC                        (1 << 9)    // APIC On-Chip
+#define EDX_SEP                         (1 << 11)   // SYSENTER/SYSEXIT instructions
+#define EDX_MTRR                        (1 << 12)   // Memory Type Range Registers
+#define EDX_PGE                         (1 << 13)   // Page Global Bit
+#define EDX_MCA                         (1 << 14)   // Machine-Check Architecture
+#define EDX_CMOV                        (1 << 15)   // Conditional Move Instruction
+#define EDX_PAT                         (1 << 16)   // Page Attribute Table
+#define EDX_PSE36                       (1 << 17)   // 36-bit Page Size Extension
+#define EDX_PSN                         (1 << 18)   // Processor Serial Number
+#define EDX_CLFLUSH                     (1 << 19)   // CLFLUSH Instruction
+#define EDX_DS                          (1 << 21)   // Debug Store
+#define EDX_ACPI                        (1 << 22)   // Thermal Monitor and Software Clock Facilities
+#define EDX_MMX                         (1 << 23)   // MMX Technology
+#define EDX_FXSR                        (1 << 24)   // FXSAVE and FXSTOR Instructions
+#define EDX_SSE                         (1 << 25)   // Streaming SIMD Extensions
+#define EDX_SSE2                        (1 << 26)   // Streaming SIMD Extensions 2
+#define EDX_SS                          (1 << 27)   // Self Snoop
+#define EDX_HTT                         (1 << 28)   // Multi-Threading
+#define EDX_TM                          (1 << 29)   // Thermal Monitor
+#define EDX_PBE                         (1 << 31)   // Pending Break Enable
+
+#define EDX_SYSCALL                     (1 << 11)   // SYSCALL/SYSRET
+#define EDX_XD                          (1 << 20)   // Execute Disable Bit
+#define EDX_1GB_PAGE                    (1 << 26)   // 1 GB Pages
+#define EDX_RDTSCP                      (1 << 27)   // RDTSCP and IA32_TSC_AUX
+#define EDX_64_BIT                      (1 << 29)   // 64-bit Architecture
+
+char array[] = {'{', '[', '|', ']', '}', '|'};// {'-', '\\', '|', '/'};
+
+void cpuid(uint32_t reg, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
+{
+    __asm__ __volatile("cpuid"
+        : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
+        : "0" (reg));
+}
+
+void CpuDetect()
+{
+    // Register storage
+    uint32_t eax, ebx, ecx, edx;
+
+    // Function 0x00 - Vendor-ID and Largest Standard Function
+
+    uint32_t largestStandardFunc;
+    char vendor[13];
+    cpuid(0, &largestStandardFunc, (uint32_t *)(vendor + 0), (uint32_t *)(vendor + 8), (uint32_t *)(vendor + 4));
+    vendor[12] = '\0';
+
+    printf("CPU Vendor: %s\n", vendor);
+
+    // Function 0x01 - Feature Information
+
+    if (largestStandardFunc >= 0x01)
+    {
+        cpuid(0x01, &eax, &ebx, &ecx, &edx);
+
+        printf("Features:");
+
+        if (edx & EDX_PSE)      printf(" PSE");
+        if (edx & EDX_PAE)      printf(" PAE");
+        if (edx & EDX_APIC)     printf(" APIC");
+        if (edx & EDX_MTRR)     printf(" MTRR");
+
+        printf("\n");
+
+        printf("Instructions:");
+
+        if (edx & EDX_TSC)      printf(" TSC");
+        if (edx & EDX_MSR)      printf(" MSR");
+        if (edx & EDX_SSE)      printf(" SSE");
+        if (edx & EDX_SSE2)     printf(" SSE2");
+        if (ecx & ECX_SSE3)     printf(" SSE3");
+        if (ecx & ECX_SSSE3)    printf(" SSSE3");
+        if (ecx & ECX_SSE41)    printf(" SSE41");
+        if (ecx & ECX_SSE42)    printf(" SSE42");
+        if (ecx & ECX_AVX)      printf(" AVX");
+        if (ecx & ECX_F16C)     printf(" F16C");
+        if (ecx & ECX_RDRAND)   printf(" RDRAND");
+
+        printf("\n");
+    }
+
+    // Extended Function 0x00 - Largest Extended Function
+
+    uint32_t largestExtendedFunc;
+    cpuid(0x80000000, &largestExtendedFunc, &ebx, &ecx, &edx);
+
+    // Extended Function 0x01 - Extended Feature Bits
+
+    if (largestExtendedFunc >= 0x80000001)
+    {
+        cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
+
+        if (edx & EDX_64_BIT)
+        {
+            printf("64-bit Architecture\n");
+        }
+    }
+
+    // Extended Function 0x02-0x04 - Processor Name / Brand String
+
+    if (largestExtendedFunc >= 0x80000004)
+    {
+        char name[48];
+        cpuid(0x80000002, (uint32_t *)(name +  0), (uint32_t *)(name +  4), (uint32_t *)(name +  8), (uint32_t *)(name + 12));
+        cpuid(0x80000003, (uint32_t *)(name + 16), (uint32_t *)(name + 20), (uint32_t *)(name + 24), (uint32_t *)(name + 28));
+        cpuid(0x80000004, (uint32_t *)(name + 32), (uint32_t *)(name + 36), (uint32_t *)(name + 40), (uint32_t *)(name + 44));
+
+        // Processor name is right justified with leading spaces
+        const char *p = name;
+        while (*p == ' ')
+        {
+            ++p;
+        }
+
+        printf("CPU Name: %s\n", p);
+    }
+} 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+uint32_t last_alloc = 0;
+alloc_t* last_returned;
+uint32_t heap_end = 0;
+uint32_t heap_begin = 0;
+uint32_t pheap_begin = 0;
+uint32_t pheap_end = 0;
+uint8_t *pheap_desc = 0;
+uint32_t memory_used = 0;
+mutex_t* malloc_mutex;
+
+void memory_init()
+{
+	last_alloc = (uint32_t)(&kernel_end) + 0x1000;
+	heap_begin = last_alloc;
+	pheap_end = 0x400000;
+	pheap_begin = pheap_end - (MEMORY_MAX_PAGE_ALIGNED_ALLOCS * 4096);
+	heap_end = pheap_begin;
+	memset((char *)heap_begin, 0, heap_end - heap_begin);
+	pheap_desc = (uint8_t *)malloc(MEMORY_MAX_PAGE_ALIGNED_ALLOCS);
+	debug("Kernel heap starts at %dKB with %dMB available\n", last_alloc / 1024, (multiboot->mem_upper + multiboot->mem_lower) / 1024);
+	malloc_mutex = mutexcreate();
+}
+
+uint32_t needs_alligning;
+void* malloc(uint32_t size)
+{
+	if(!size) return 0;
+	mutexlock(malloc_mutex);
+	uint8_t *mem = (uint8_t *)heap_begin;
+	while((uint32_t)mem < last_alloc)
+	{
+		alloc_t *a = (alloc_t *)mem;
+		if(!a->size)
+		{
+			goto nalloc;
+		}
+		if(a->status)
+		{
+			mem += a->size;
+			mem += sizeof(alloc_t);
+			mem += 4;
+			continue;
+		}
+		if(a->size >= size)
+		{
+			if(needs_alligning)
+			{
+				if(((uint32_t)mem + sizeof(alloc_t)) & 0xFFFFF000)
+				{
+					goto skip;
+				}
+			}
+			a->status = 1;
+			printf("RE:Allocated %d bytes from %d to %d\n", size, mem + sizeof(alloc_t), mem + sizeof(alloc_t) + size);
+			memset(mem + sizeof(alloc_t), 0, size);
+			memory_used += size + sizeof(alloc_t);
+			mutexunlock(malloc_mutex);
+			return (char *)(mem + sizeof(alloc_t));
+			skip:;
+		}
+		mem += a->size;
+		mem += sizeof(alloc_t);
+		mem += 4;
+	}
+
+	nalloc:;
+	if(last_alloc+size+sizeof(alloc_t) >= heap_end)
+	{
+		PANIC("OUT OF MEMORY");
+	}
+	alloc_t *alloc = (alloc_t *)last_alloc;
+	alloc->status = 1;
+	alloc->size = size;
+
+	last_alloc += size;
+	last_alloc += sizeof(alloc_t);
+	last_alloc += 4;
+	debug("Allocated %d bytes from %d to %d\n", size, (uint32_t)alloc + sizeof(alloc_t), last_alloc);
+	memory_used += size + 4 + sizeof(alloc_t);
+	memset((char *)((uint32_t)alloc + sizeof(alloc_t)), 0, size);
+	last_returned = alloc;
+	mutexunlock(malloc_mutex);
+	return (char *)((uint32_t)alloc + sizeof(alloc_t));
+}
+
+void* malloc_a(uint32_t size)
+{
+	needs_alligning = true;
+	uint32_t addr = (uint32_t)(last_returned + last_returned->size + sizeof(alloc_t) + 4);
+	if(last_alloc & 0xFFFFF000)
+	{
+		last_alloc &= 0xFFFFF000;
+        last_alloc += 0x1000;
+	}
+	last_alloc -= sizeof(alloc_t);
+	last_returned->size = last_alloc - addr;
+	needs_alligning = false;
+	return malloc(size);
+}
+
+void* malloc_ap(uint32_t size, uint32_t* ptr)
+{
+	needs_alligning = true;
+	uint32_t addr = (uint32_t)(last_returned + last_returned->size + sizeof(alloc_t) + 4);
+	if(last_alloc & 0xFFFFF000)
+	{
+		last_alloc &= 0xFFFFF000;
+        last_alloc += 0x1000;
+	}
+	last_alloc -= sizeof(alloc_t);
+	last_returned->size = last_alloc - addr;
+	needs_alligning = false;
+	*ptr = (uint32_t)malloc(size);
+	return (void*)*ptr;
+}
+
+void free(void* mem)
+{
+	debug("DE:Allocated address %x\n", (uint32_t)mem);
+	alloc_t *alloc = (alloc_t*)((uint32_t)mem - sizeof(alloc_t));
+	alloc->status = 0;
+	memset((char *)((uint32_t)alloc + sizeof(alloc_t)), 0, alloc->size);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#ifndef PAGING_H
+#define PAGING_H
+
+#include <common.h>
+#include <descriptors.h>
+
+typedef struct page
+{
+    uint32_t present    : 1;
+    uint32_t rw         : 1;
+    uint32_t user       : 1;
+    uint32_t accessed   : 1;
+    uint32_t dirty      : 1;
+    uint32_t unused     : 7;
+    uint32_t frame      : 20;
+} page_t;
+
+typedef struct page_table
+{
+    page_t pages[1024];
+} page_table_t;
+
+typedef struct page_directory
+{
+    page_table_t *tables[1024];
+    uint32_t tablesPhysical[1024];
+    uint32_t physicalAddr;
+} page_directory_t;
+
+extern void paging_init();
+extern void paging_switch_directory(page_directory_t *new);
+extern page_t *paging_get_page(uint32_t address, int make, page_directory_t *dir);
+extern void paging_page_fault();
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <paging.h>
+#include <memory.h>
+#include <common.h>
+#include <main.h>
+
+page_directory_t *kernel_directory=0;
+page_directory_t *current_directory=0;
+
+uint32_t *frames;
+uint32_t nframes;
+
+extern uint32_t heap_pointer;
+
+#define INDEX_FROM_BIT(a) (a/(8*4))
+#define OFFSET_FROM_BIT(a) (a%(8*4))
+
+void set_frame(uint32_t frame_addr)
+{
+    uint32_t frame = frame_addr/0x1000;
+    uint32_t idx = INDEX_FROM_BIT(frame);
+    uint32_t off = OFFSET_FROM_BIT(frame);
+    frames[idx] |= (0x1 << off);
+}
+
+void clear_frame(uint32_t frame_addr)
+{
+    uint32_t frame = frame_addr/0x1000;
+    uint32_t idx = INDEX_FROM_BIT(frame);
+    uint32_t off = OFFSET_FROM_BIT(frame);
+    frames[idx] &= ~(0x1 << off);
+}
+
+uint32_t test_frame(uint32_t frame_addr)
+{
+    uint32_t frame = frame_addr/0x1000;
+    uint32_t idx = INDEX_FROM_BIT(frame);
+    uint32_t off = OFFSET_FROM_BIT(frame);
+    return (frames[idx] & (0x1 << off));
+}
+
+uint32_t first_frame()
+{
+    uint32_t i, j;
+    for (i = 0; i < INDEX_FROM_BIT(nframes); i++)
+    {
+        if (frames[i] != 0xFFFFFFFF)
+        {
+            for (j = 0; j < 32; j++)
+            {
+                uint32_t toTest = 0x1 << j;
+                if ( !(frames[i]&toTest) )
+                {
+                    return i*4*8+j;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void alloc_frame(page_t *page, int is_kernel, int is_writeable)
+{
+    if (page->frame != 0)
+    {
+        return;
+    }
+    else
+    {
+        uint32_t idx = first_frame();
+        if (idx == (uint32_t)-1)
+        {
+            // PANIC! no free frames!!
+            PANIC("No Free Frames");
+        }
+        set_frame(idx*0x1000);
+        page->present = 1;
+        page->rw = (is_writeable)?1:0;
+        page->user = (is_kernel)?0:1;
+        page->frame = idx;
+    }
+}
+
+void free_frame(page_t *page)
+{
+    uint32_t frame;
+    if (!(frame=page->frame))
+    {
+        return;
+    }
+    else
+    {
+        clear_frame(frame);
+        page->frame = 0x0;
+    }
+}
+
+void paging_init()
+{
+    uint32_t mem_end_page = (multiboot->mem_upper + multiboot->mem_lower) * 1024;
+    printf("OAWIDWOIADJAOWIDJ %d\n", mem_end_page);
+    nframes = mem_end_page;
+    frames = (uint32_t*)malloc(INDEX_FROM_BIT(nframes));
+    memset(frames, 0, INDEX_FROM_BIT(nframes));
+    kernel_directory = (page_directory_t*)malloc_a(sizeof(page_directory_t));
+    current_directory = kernel_directory;
+    int i = 0;
+    while (i < (int32_t)heap_pointer * 2)
+    {
+        alloc_frame(paging_get_page(i, 1, kernel_directory), 1, 1);
+        i += 0x1000;
+    }
+    set_int(14, &paging_page_fault);
+    paging_switch_directory(kernel_directory);
+}
+
+void paging_switch_directory(page_directory_t *dir)
+{
+    current_directory = dir;
+    asm("mov %0, %%cr3":: "r"(&dir->tablesPhysical));
+    uint32_t cr0;
+    asm("mov %%cr0, %0": "=r"(cr0));
+    cr0 |= 0x80000000;
+    asm("mov %0, %%cr0":: "r"(cr0));
+}
+
+page_t *paging_get_page(uint32_t address, int make, page_directory_t *dir)
+{
+    address /= 0x1000;
+    uint32_t table_idx = address / 1024;
+    if (dir->tables[table_idx])
+    {
+        return &dir->tables[table_idx]->pages[address%1024];
+    }
+    else if(make)
+    {
+        uint32_t tmp;
+        dir->tables[table_idx] = (page_table_t*)malloc_ap(sizeof(page_table_t), &tmp);
+        dir->tablesPhysical[table_idx] = tmp | 0x7;
+        return &dir->tables[table_idx]->pages[address%1024];
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void paging_page_fault()
+{
+    registers_t* r = (registers_t*)oldESP;
+    uint32_t faulting_address;
+    __asm__ __volatile("mov %%cr2, %0" : "=r" (faulting_address));
+    
+    int present   = !(r->err_code & 0x1);
+    int rw = r->err_code & 0x2;
+    int us = r->err_code & 0x4;
+    int reserved = r->err_code & 0x8;
+    //int id = r->err_code & 0x10;
+
+    debug("Page fault! ( ");
+    if (present) {debug("present ");}
+    if (rw) {debug("read-only ");}
+    if (us) {debug("user-mode ");}
+    if (reserved) {debug("reserved ");}
+    debug(") at ");
+    debug("%d", faulting_address);
+    debug("\n");
+    faulting_address &= 0xFFFFF000;
+    alloc_frame(paging_get_page(faulting_address, 1, current_directory), 1, 1);
+    paging_switch_directory(current_directory);
+}
+//sync
+
+    while(true)
+    {      
+        while ((inb(0x3DA) & 0x08));
+        while (!(inb(0x3DA) & 0x08));
+        fps++;
+      }
+
+
+
+
+      floppy
+
+
+      
+
+void detect_floppy_drives()
+{
+	unsigned char c;
+	unsigned char a, b;
+	char *drive_type[5] = {
+		"no floppy drive",
+		"360kb 5.25in floppy drive",
+		"1.2mb 5.25in floppy drive",
+		"720kb 3.5in",
+		"1.44mb 3.5in",
+		"2.88mb 3.5in" };
+
+	outb(0x70, 0x10);
+	c = inb(0x71);
+
+	a = c >> 4; // get the high nibble
+	b = c & 0xF; // get the low nibble by ANDing out the high nibble
+
+	printf("Floppy drive A is an:\n");
+	printf(drive_type[a]);
+	printf("\nFloppy drive B is an:\n");
+	printf(drive_type[b]);
+	printf("\n");
+};
+
+
+
+
+
+
+
+org 0x4000
+
+boot16start:
+cli
+;lgdt [stack2]
+mov eax, cr0 
+or al, 1
+mov cr0, eax
+JMP 08h:PModeMain
+ 
+PModeMain:
+jmp PModeMain
+boot16end:
+	push edi
+	push eax
+
+	mov edi, 0x0000000000110000
+	xor eax, eax
+	mov [edi+0x0310], eax
+	mov eax, 0x000C0080
+	mov [edi+0x0300], eax
+
+	pop eax
+	pop edi
+	ret
+
+STACKSIZE2 equ 0x2000
+stack2:
+    resb STACKSIZE2

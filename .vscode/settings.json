@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "gdt.h": "c",
+        "common.h": "c",
+        "memory.h": "c",
+        "main.h": "c",
+        "descriptor_tables.h": "c",
+        "isr.h": "c",
+        "tasking.h": "c",
+        "descriptors.h": "c"
+    }
+}
