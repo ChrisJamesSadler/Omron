@@ -24,29 +24,12 @@ mov eax, cr0
 or eax, 0x1
 mov cr0, eax
 sti
+
 [bits 32]
 mov dword eax, 103b64h
 call eax
 [bits 16]
 
-
-print:
-	mov bp,sp
-	cont:
-	lodsb
-	or al,al
-	jz dne
-	mov ah,0x0e
-	mov bx,0
-	int 10h
-	jmp cont
-dne:
-	mov sp,bp
-	ret
-msg db "Application core online..",10,13,0
-
-
- 
 GDT_Contents:
 db 0, 0, 0, 0, 0, 0, 0, 0			; Offset: 0  - Null selector - required 
 db 255, 255, 0, 0, 0, 0x9A, 0xCF, 0	; Offset: 8  - KM Code selector - covers the entire 4GiB address range
