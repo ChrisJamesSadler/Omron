@@ -163,6 +163,12 @@ uint16_t getClassCode(uint16_t bus, uint16_t device, uint16_t function)
         return r0;
 }
 
+uint16_t getSubCode(uint16_t bus, uint16_t device, uint16_t function)
+{
+        uint32_t r0 = pci_read_word(bus,device,function,12);
+        return r0;
+}
+
 void pci_probe()
 {
 	for(uint32_t bus = 0; bus < 256; bus++)
@@ -176,6 +182,7 @@ void pci_probe()
                 uint16_t device = getDeviceID(bus, slot, function);
                 if(device == 0x7A0) continue;
                 uint16_t class = getClassCode(bus, slot, function);
+                //uint16_t sub = getSubCode(bus, slot, function);
                 device_t* dev = malloc(sizeof(device_t));
                 dev->name = GetDetails(vendor, device, class);
                 pci_private_data_t* priv =  malloc(sizeof(pci_private_data_t));

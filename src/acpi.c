@@ -213,8 +213,8 @@ void acpi_init()
          // check if the desired table is reached
          if (acpiCheckHeader((unsigned int *) *ptr, "FACP") == 0)
          {
-            entrys = -2;
             struct FACP *facp = (struct FACP *) *ptr;
+            
             if (acpiCheckHeader((unsigned int *) facp->DSDT, "DSDT") == 0)
             {
                // search the \_S5 package in the DSDT
@@ -261,9 +261,42 @@ void acpi_init()
                }
             }
          }
+         if (acpiCheckHeader((unsigned int *) *ptr, "HPET") == 0)
+         {
+             
+         }
          ptr++;
       }
    }
+}
+
+uint32_t AcpiRemapIrq(uint32_t irq)
+{
+    AcpiMadt *madt = s_madt;
+
+    uint8_t *p = (uint8_t *)(madt + 1);
+    uint8_t *end = (uint8_t *)madt + madt->header.length;
+
+    while (p < end)
+    {
+        ApicHeader *header = (ApicHeader *)p;
+        uint8_t type = header->type;
+        uint8_t length = header->length;
+
+        if (type == APIC_TYPE_INTERRUPT_OVERRIDE)
+        {
+            ApicInterruptOverride *s = (ApicInterruptOverride *)p;
+
+            if (s->source == irq)
+            {
+                return s->interrupt;
+            }
+        }
+
+        p += length;
+    }
+
+    return irq;
 }
 
 void acpi_shutdown()

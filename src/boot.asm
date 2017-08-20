@@ -5,12 +5,10 @@ global write_ident
 global read_ident
 global idt_blank_handler
 global flagRND
-global bootstrap_before
-global bootstrap_after
 
 extern main
-extern oldESP
 extern isr_handler
+extern g_localApicAddr
 
 ; Multiboot Header
 MODULEALIGN equ 1<<0
@@ -107,13 +105,18 @@ isr_common_handler:
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	mov [oldESP], esp
 	mov eax, esp
 	push eax
 	call isr_handler
-	pop eax
-	mov eax, [oldESP]
+	pop ebx
 	mov esp, eax
+	mov edi, [g_localApicAddr]
+	cmp edi, 0
+	jnz endint
+	add edi, 0xb0
+	xor eax, eax
+	stosd
+	endint:
 	pop gs
 	pop fs
 	pop es

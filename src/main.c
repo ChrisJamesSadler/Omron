@@ -12,38 +12,44 @@
 #include <hal.h>
 #include <rtc.h>
 #include <cpu.h>
+#include <pic.h>
 
-extern uint32_t g_activeCpuCount;
-uint32_t gatepassed;
+extern device_t* mainatadevice;
 
 void main()
 {
-    g_activeCpuCount++;
-    if(gatepassed)
-    {
-        printf("Core %d booted\n", g_activeCpuCount);
-        while(true) asm("hlt");
-    }
-    gatepassed = true;
-	asm("movl %%ebx, %0": "=m"(multiboot));
+    asm("movl %%ebx, %0": "=m"(multiboot));
     textscreen_clear();
     printf("Loading...\n");
-    uint32_t* aptr = (uint32_t*)0;
-    *aptr = (uint32_t)&main;
-    printf("Main address is %x point is %x\n", &main, *(uint32_t*)0);
     descriptors_init();
     memory_init();
     acpi_init();
     //paging_init();
     rtc_init();
+    pic_init();
     pit_init();
     tasking_init();
     asm("sti");
     hal_init();
     ata_init();
     cpu_init();
-    while(true){}
     services_init();
     create_thread("Shell", (uint32_t)&shell_main);
     while(true) asm("hlt");
+}
+
+module_t* findMod(char* name)
+{
+    if (multiboot->mods_count > 0)
+    {
+        for (uint32_t i = 0; i < multiboot->mods_count; ++i )
+        {
+            module_t* mod = (module_t*)((uint32_t*)multiboot->mods_addr + (8 * i));
+            if(strends(mod->name, name))
+            {
+                return mod;
+            }
+        }
+    }
+    return null;
 }

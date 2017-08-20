@@ -4,9 +4,17 @@
 #include <acpi.h>
 #include <tasking.h>
 #include <main.h>
+#include <descriptors.h>
+#include <lapic.h>
+#include <ioapic.h>
+#include <pic.h>
+#include <pit.h>
 
 extern uint32_t g_acpiCpuCount;
+extern uint32_t g_localApicAddr;
 extern multiboot_header_t* multiboot;
+extern uint8_t textscreen_height;
+uint8_t g_activeCpuCount;
 
 void cpuid(uint32_t reg, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
 {
@@ -81,8 +89,6 @@ void detect_cpu()
         }
     }
 
-    // Extended Function 0x02-0x04 - Processor Name / Brand String
-
     if (largestExtendedFunc >= 0x80000004)
     {
         char* name = malloc(48);
@@ -90,77 +96,48 @@ void detect_cpu()
         cpuid(0x80000003, (uint32_t *)(name + 16), (uint32_t *)(name + 20), (uint32_t *)(name + 24), (uint32_t *)(name + 28));
         cpuid(0x80000004, (uint32_t *)(name + 32), (uint32_t *)(name + 36), (uint32_t *)(name + 40), (uint32_t *)(name + 44));
 
-        // Processor name is right justified with leading spaces
         const char *p = name;
         while (*p == ' ')
         {
             ++p;
         }
         dev->name = name;
-        name = malloc(40);
-        memset(name, ' ', strlen(dev->name) + 7);
-        for(uint32_t i = 0; i < strlen(dev->name); i++)
-        {
-            if(!memcmp(dev->name + i, "CPU", 3))
-            {
-                memcpy(name, dev->name, i);
-                name[i] = '0' + g_acpiCpuCount;
-                name[i + 1] = ' ';
-                name[i + 2] = 'C';
-                name[i + 3] = 'o';
-                name[i + 4] = 'r';
-                name[i + 5] = 'e';
-                name[i + 6] = 's';
-                memcpy(name + i + 8, dev->name + i, strlen(dev->name) - i);
-            }
-        }
-        free(dev->name);
-        dev->name = name;
     }
 }
 
-extern uint32_t g_localApicAddr;
-uint8_t g_activeCpuCount;
-
-uint32_t LocalApicIn(uint32_t reg)
+void ap_entry()
 {
-    return MmioRead32((uint8_t*)(g_localApicAddr + reg));
+    asm("cli");
+    descriptors_init();
+    LocalApicInit();
+    IoApicInit();
+    asm("sti");
+    g_activeCpuCount++;
+    //textscreen_height = 50;
+    while(true) asm("hlt");
 }
 
-void LocalApicOut(uint32_t reg, uint32_t data)
+uint8_t detect_flag;
+void detect_timeout()
 {
-    MmioWrite32((uint8_t*)(g_localApicAddr + reg), data);
-}
-
-void LocalApicSendInit(uint32_t apic_id)
-{
-    LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
-    LocalApicOut(LAPIC_ICRLO, ICR_INIT | ICR_PHYSICAL
-        | ICR_ASSERT | ICR_EDGE | ICR_NO_SHORTHAND);
-
-    while (LocalApicIn(LAPIC_ICRLO) & ICR_SEND_PENDING)
-        ;
-}
-
-void LocalApicSendStartup(uint32_t apic_id, uint32_t vector)
-{
-    LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
-    LocalApicOut(LAPIC_ICRLO, vector | ICR_STARTUP
-        | ICR_PHYSICAL | ICR_ASSERT | ICR_EDGE | ICR_NO_SHORTHAND);
-
-    while (LocalApicIn(LAPIC_ICRLO) & ICR_SEND_PENDING)
-        ;
-}
-
-uint32_t LocalApicGetId()
-{
-    return LocalApicIn(LAPIC_ID) >> 24;
+    sleep(500);
+    detect_flag = true;
 }
 
 void detect_cores()
 {
-    memcpy((void*)0x8000, (void*)((module_t*)multiboot->mods_addr)->start, ((module_t*)multiboot->mods_addr)->end - ((module_t*)multiboot->mods_addr)->start);
-    printf("Waking up all CPUs\n");
+    module_t* module = findMod("smp");
+    if(!module)
+    {
+        printf("No mod");
+        return;
+    }
+    uint32_t* ptr = (uint32_t*)0x1000;
+    *ptr = (uint32_t)&ap_entry;
+    uint32_t modsize = module->end - module->start;
+    uint8_t* stores = malloc(modsize);
+    memcpy(stores, (void*)0, modsize);
+    memcpy((void*)0, (void*)module->start, modsize);
     uint32_t localId = LocalApicGetId();
     sleep(1);
     for(uint32_t core = 0; core < g_acpiCpuCount; core++)
@@ -172,17 +149,14 @@ void detect_cores()
         }
         LocalApicSendInit(apicId);
         sleep(10);
-        LocalApicSendStartup(apicId, 8);
-        sleep(2000);
+        LocalApicSendStartup(apicId, 0);
+        sleep(10);
     }
-    if (g_activeCpuCount == g_acpiCpuCount)
-    {
-        printf("All %d CPUs activated\n", g_acpiCpuCount - g_activeCpuCount);
-    }
-    else
-    {
-        printf("Failed to init %d CPUs\n", g_acpiCpuCount - g_activeCpuCount);
-    }
+    memcpy((void*)0, stores, modsize);
+    free(stores);
+    detect_flag = false;
+    create_thread("detect cores timeout", (uint32_t)&detect_timeout);
+    while(g_activeCpuCount != g_acpiCpuCount && detect_flag == false) asm("hlt");
 }
 
 void cpu_init()
@@ -193,6 +167,8 @@ void cpu_init()
 	asm("mov %0, %%cr4" :: "r"(cr4));
     uint16_t cw = 0x37F;
 	asm("fldcw %0" :: "m"(cw));
-    detect_cpu();
     detect_cores();
+    detect_cpu();
+    LocalApicInit();
+    IoApicInit();
 }

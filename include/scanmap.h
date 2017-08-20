@@ -1,5 +1,5 @@
-#ifndef SCANMAP_H
-#define SCANMAP_H
+#ifndef __SCANMAP_H__
+#define __SCANMAP_H__
 
 #include <common.h>
 

@@ -85,17 +85,23 @@ void isr_deadlock()
 {
 	while(1)
 	{
-		asm("hlt");
+		//asm("hlt");
 	}
 }
 
-void isr_handler(registers_t *r)
+uint32_t isr_handler(uint32_t esp)
 {
+	registers_t* r = (registers_t*)esp;
 	send_eoi(r->int_no);
 	if (interrupt_handlers[r->int_no] != 0)
 	{
 		isr_t handler = (isr_t)interrupt_handlers[r->int_no];
-		handler(r);
+		uint32_t nsp = handler(esp);
+		if(nsp == 0)
+		{
+			nsp = esp;
+		}
+		return nsp;
 	}
 	else
 	{
@@ -111,13 +117,7 @@ void isr_handler(registers_t *r)
 			}
 			else
 			{
-				if(thread_current->notify_esp != 0)
-				{
-					oldESP = thread_current->esp;
-					thread_current->notify_esp = 0;
-					free((void*)thread_current->notify_esptop);
-				}
-				else if(listlength(thread_current->catcher) > 0)
+				if(listlength(thread_current->catcher) > 0)
 				{
 					poplast(thread_current->catcher, &r->eip);
 				}
@@ -155,6 +155,7 @@ void isr_handler(registers_t *r)
 			}
 		}
 	}
+	return esp;
 }
 
 void idt_init()
@@ -162,16 +163,6 @@ void idt_init()
     idt_ptr.limit = sizeof(idt_entry_t) * 256 -1;
     idt_ptr.base  = (uint32_t)&idt_entries;
     memset(&idt_entries, 0, sizeof(idt_entry_t)*256);
-    outb(0x20, 0x11);
-    outb(0xA0, 0x11);
-    outb(0x21, 0x20);
-    outb(0xA1, 0x28);
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
-    outb(0x21, 0x01);
-    outb(0xA1, 0x01);
-    outb(0x21, 0x0);
-    outb(0xA1, 0x0);
 	for(int i = 0 ; i < 256; i++)
 	{
 		idt_set_gate(i, &idt_blank_handler, 0x08, 0x8E);

@@ -1,5 +1,6 @@
 #include <common.h>
 #include <textscreen.h>
+#include <tasking.h>
 
 uint16_t* textscreen_address = (uint16_t*)0xB8000;
 uint8_t textscreen_x = 0;
@@ -11,7 +12,7 @@ uint8_t textscreen_secondary = TUIColourBlack;
 
 void textscreen_clear()
 {
-    uint8_t p = textscreen_primary;
+    /*uint8_t p = textscreen_primary;
     uint8_t s = textscreen_secondary;
     textscreen_primary = TUIColourLightGray;
     textscreen_secondary = TUIColourBlack;
@@ -25,7 +26,11 @@ void textscreen_clear()
     textscreen_x = 0;
     textscreen_y = 0;
     textscreen_primary = p;
-    textscreen_secondary = s;
+    textscreen_secondary = s;*/
+    
+    textscreen_x = 0;
+    textscreen_y = 0;
+    memset(textscreen_address, 0, (textscreen_width * textscreen_height) * 2);
 }
 
 void textscreen_write_str(char* aStr)
@@ -105,23 +110,11 @@ void textscreen_write_char(char aChar)
         textscreen_x = 0;
         textscreen_y++;
     }
-
-    uint8_t attributeByte = (0 /*black*/ << textscreen_primary) | (textscreen_secondary /*white*/ & 0x0F);
-    uint16_t blank = 0x20 /* space */ | (attributeByte << 8);
-
+    
     if(textscreen_y >= textscreen_height)
     {
-        int32_t i;
-        for(i = 0; i < textscreen_width * textscreen_height; i++)
-        {
-            textscreen_address[i] = textscreen_address[i + 80];
-        }
-
-        for(i = textscreen_width * (textscreen_height - 1); i < textscreen_width * textscreen_height; i++)
-        {
-            textscreen_address[i] = blank;
-        }
-
+        memcpy(textscreen_address, textscreen_address + (textscreen_width), (textscreen_width * textscreen_height) * 2);
+        memset(textscreen_address + (textscreen_width * textscreen_height), 0, textscreen_width * 2);
         textscreen_y = textscreen_height - 1;
     }
     textscreen_updatecursor();
@@ -161,13 +154,8 @@ uint32_t textscreen_getcursory()
 
 void textscreen_write_panic(char *message, char *file, uint32_t line)
 {
-    asm("cli");
-    textscreen_write_str("CRITICAL!!!  --  ");
-    textscreen_write_str(message);
-    textscreen_write_str("  --  ");
-    textscreen_write_str(file);
-    textscreen_write_str(":");
-    textscreen_write_dec(line);
-    textscreen_write_char('\n');
+    //asm("cli");
+    send_sig(p_id(), SIG_PRI, THREAD_PRIORITY_REALTIME);
+    printf("CRITICAL!!!  --  %s  --  %s:%d\n", message, file, line);
     while (1) asm("hlt");
 }

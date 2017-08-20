@@ -7,9 +7,28 @@
 
 void memcpy(void *dest, const void *src, uint32_t len)
 {
-    const uint8_t *sp = (const uint8_t *)src;
-    uint8_t *dp = (uint8_t *)dest;
-    for(; len != 0; len--) *dp++ = *sp++;
+    long * plDst = (long *) dest;
+    long const * plSrc = (long const *) src;
+
+    if (!((uint32_t)src & 0xFFFFFFFC) && !((uint32_t)dest & 0xFFFFFFFC))
+    {
+        while (len >= 4)
+    {
+            *plDst++ = *plSrc++;
+            len -= 4;
+        }
+    }
+
+    char * pcDst = (char *) plDst;
+    char const * pcSrc = (char const *) plSrc;
+
+    while (len--)
+    {
+        *pcDst++ = *pcSrc++;
+    }
+    //const uint8_t *sp = (const uint8_t *)src;
+    //uint8_t *dp = (uint8_t *)dest;
+    //for(; len != 0; len--) *dp++ = *sp++;
 }
 
 void memset(void *dest, uint8_t val, uint32_t len)
@@ -75,6 +94,24 @@ int32_t strbegins(const void* s1, const void* s2)
     return 1;
 }
 
+int32_t strends(const void* s1, const void* s2)
+{
+    char* str1 = (char*)s1;
+    char* str2 = (char*)s2;
+    uint32_t slen1 = strlen(str1);
+    uint32_t slen2 = strlen(str2);
+    str1 += slen1;
+    str1 -= slen2;
+    for(uint32_t i = 0; i < slen2; i++)
+    {
+        if(str1[i] != str2[i])
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int32_t strcpy(char* dest, char* src)
 {
     int32_t i = 0;
@@ -104,6 +141,20 @@ void strtrim(char* str, char c)
     }
 }
 
+int32_t strlastindex(char* str, uint8_t aChar)
+{
+    int32_t len = (int32_t)strlen(str);
+    int32_t ret = -1;
+    for(int32_t i = 0; i < len; i++)
+    {
+        if(str[i] == aChar)
+        {
+            ret = i;
+        }
+    }
+    return ret;
+}
+
 void outb(uint16_t port, uint8_t value)
 {
     __asm__ __volatile ("outb %1, %0" : : "dN" (port), "a" (value));
@@ -117,6 +168,16 @@ void outw(uint16_t port, uint16_t value)
 void outd(uint16_t port, uint32_t value)
 {
     __asm__ volatile("outl %0, %w1" : : "a" (value), "Nd" (port));
+}
+
+void outsl(uint32_t port, void *addr, int cnt)
+{
+    __asm__ __volatile (
+        "cld;"
+        "repne; outsl;"
+        : "=S" (addr), "=c" (cnt)
+        : "d" (port), "0" (addr), "1" (cnt)
+        : "memory", "cc");
 }
 
 uint8_t inb(uint16_t port)
@@ -138,6 +199,16 @@ uint32_t ind(uint16_t port)
 	uint32_t ret;
 	__asm__ __volatile("inl %%dx, %%eax":"=a"(ret):"d"(port));
 	return ret;
+}
+
+void insl(uint32_t port, void *addr, int cnt)
+{
+    __asm__ __volatile(
+        "cld;"
+        "repne; insl;"
+        : "=D" (addr), "=c" (cnt)
+        : "d" (port), "0" (addr), "1" (cnt)
+        : "memory", "cc");
 }
 
 void printf(char* str, ...)
@@ -286,7 +357,7 @@ void mutexlock(mutex_t* m)
     }
 	while(m->locked)
     {
-        // switch to next thread
+        sleep(1);
     }
 	m->locked = 1;
     m->locker = thread_current->tid;
@@ -374,7 +445,7 @@ uint32_t popfirst(list_t* thelist, uint32_t* output)
     return 1;
 }
 
-uint32_t popitem(list_t* thelist, uint32_t index, uint32_t* output)
+uint32_t popitem(list_t* thelist, uint32_t index, void* output)
 {
     if(!thelist)
     {
@@ -384,7 +455,7 @@ uint32_t popitem(list_t* thelist, uint32_t index, uint32_t* output)
     {
         return 0;
     }
-    *output = thelist->pointer[index];
+    *(uint32_t*)output = thelist->pointer[index];
     for(int i = index; i < thelist->current - 1; i++)
     {
         thelist->pointer[i] = thelist->pointer[i + 1];

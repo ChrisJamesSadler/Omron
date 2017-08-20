@@ -624,3 +624,136 @@ boot16end:
 STACKSIZE2 equ 0x2000
 stack2:
     resb STACKSIZE2
+
+
+
+
+
+
+
+
+    uint32_t count = 100;
+    memset((void*)0x8000, 0, count);
+    memset((void*)0x8000, 'G', count - 1);
+    asm("push 0x8000");
+    uint32_t addr = 0x0010157a;
+	asm("jmp *%0" : : "r" (addr));
+
+
+
+
+
+
+
+
+
+
+    
+    module_t* mod = findMod("intx86");
+    if(mod != null)
+    {
+        printf("Running test\n");
+        uint32_t size = mod->end - mod->start;
+        memcpy((void*)0, mod->start, size);
+        uint32_t addr = 0;
+        asm ("jmp *%0" : : "r" (addr));
+    }
+
+
+
+
+
+        /*descriptors_init();
+    memory_init();
+    pic_init();
+    acpi_init();
+    //paging_init();
+    rtc_init();
+    pit_init();
+    tasking_init();
+    asm("sti");
+    hal_init();
+    ata_init();
+    cpu_init();
+    pit_init();
+    services_init();
+    create_thread("Shell", (uint32_t)&shell_main);
+    while(true) asm("hlt");*/
+
+    create a link list storing a cpu struct. in this struct point to the current thread. on pit timer selectt the next cpu and switch its thread.  look at removing the old esp value from the intterupt handler and pass it as a param. return the new esp as a variable
+
+
+    
+	/*if(this != thread_current)
+	{
+		this->age = lage + 10;
+		while(true)
+		{
+			if(this->notify_esp == 0)
+			{
+				sleep(1);
+				debug("Sending sig %d from %s to %s\n", sig, thread_current->name, this->name);
+				this->notify_esptop = (uint32_t)malloc(1024);
+				uint32_t* stack = (uint32_t *)(this->notify_esptop + 1024);
+				/**--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = param;
+				*--stack = sig;
+				*--stack = (uint32_t)this;
+				*--stack = 0x10; // ss ?
+				*--stack = 0x00000202; // eflags
+				*--stack = 0x8; // cs
+				*--stack = (uint32_t)&__notified; // eip
+				*--stack = 0; // error
+				*--stack = 0; // int
+				*--stack = 0; // eax
+				*--stack = 0; // ebx
+				*--stack = 0; // ecx
+				*--stack = 0; // offset
+				*--stack = 0; // edx
+				*--stack = 0; // esi
+				*--stack = 0; // edi
+				*--stack = this->notify_esptop + 1024; //ebp
+				*--stack = 0x10; // ds
+				*--stack = 0x10; // fs
+				*--stack = 0x10; // es
+				*--stack = 0x10; // gs*/
+
+				/**--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = 0; // trash
+				*--stack = param;
+				*--stack = 0x10; // ss ?
+				*--stack = 0x00000202; // eflags
+				*--stack = 0x8; // cs
+				*--stack = (uint32_t)&__notified; // eip
+				*--stack = 0; // error
+				*--stack = 0; // int
+				*--stack = 0; // eax
+				*--stack = 0; // ebx
+				*--stack = 0; // ecx
+				*--stack = 0; // offset
+				*--stack = 0; // edx
+				*--stack = 0; // esi
+				*--stack = 0; // edi
+				*--stack = this->notify_esptop + 1024; //ebp
+				*--stack = 0x10; // ds
+				*--stack = 0x10; // fs
+				*--stack = 0x10; // es
+				*--stack = 0x10; // gs
+
+				this->notify_esp = (uint32_t)stack;
+				this->notify_flag = true;
+				break;
+			}
+		}
+	}
+	else
+	{*/

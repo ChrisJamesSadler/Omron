@@ -4,6 +4,8 @@
 #include <hal.h>
 
 uint8_t* ata_buf;
+device_t* mainatadevice;
+uint8_t ata_next = 'a';
 
 void ata_init()
 {
@@ -70,12 +72,15 @@ pm_stat_read:
         debug("%s\n", str);
         device_t *dev = (device_t *)malloc(sizeof(device_t));
 		dev->name = str;
-		dev->unique_id = DEVICE_ID_ATA;
-		dev->dev_type = DEVICE_TYPE_BLOCK;
-		dev->read = (device_read_t)ata_read;
-		ata_private_data_t *priv = (ata_private_data_t*)malloc(sizeof(ata_private_data_t));
-		priv->drive = (bus << 1) | drive;
-		dev->priv = priv;
+		dev->id = DEVICE_ID_ATA;
+		dev->type = DEVICE_TYPE_BLOCK;
+		dev->path = malloc(10);
+		strcat(dev->path, "/dev/hd");
+		dev->path[strlen(dev->path)] = ata_next;
+		ata_next++;
+		dev->priv = malloc(sizeof(ata_private_data_t));
+		((ata_private_data_t*)dev->priv)->drive = (bus << 1) | drive;
+		mainatadevice = dev;
 		deviceadd(dev);
 		return 1;
     }
@@ -114,18 +119,22 @@ void ata_read_block(uint8_t *buf, uint32_t lba, uint32_t ata_drive)
 	switch(ata_drive)
 	{
 		case (ata_controller_primary << 1 | ata_drive_master):
+    		ata_select_drive(ata_controller_primary, ata_drive_master);
 			io = ata_primary_io;
 			ata_drive = ata_drive_master;
 			break;
 		case (ata_controller_primary << 1 | ata_drive_slave):
+    		ata_select_drive(ata_controller_primary, ata_drive_slave);
 			io = ata_primary_io;
 			ata_drive = ata_drive_slave;
 			break;
 		case (ata_controller_secondary << 1 | ata_drive_master):
+    		ata_select_drive(ata_controller_secondary, ata_drive_master);
 			io = ata_secondary_io;
 			ata_drive = ata_drive_master;
 			break;
 		case (ata_controller_secondary << 1 | ata_drive_slave):
+    		ata_select_drive(ata_controller_secondary, ata_drive_slave);
 			io = ata_secondary_io;
 			ata_drive = ata_drive_slave;
 			break;
@@ -158,18 +167,22 @@ void ata_write_block(uint8_t *buf, uint32_t lba, uint32_t ata_drive)
 	switch(ata_drive)
 	{
 		case (ata_controller_primary << 1 | ata_drive_master):
+    		ata_select_drive(ata_controller_primary, ata_drive_master);
 			io = ata_primary_io;
 			ata_drive = ata_drive_master;
 			break;
 		case (ata_controller_primary << 1 | ata_drive_slave):
+    		ata_select_drive(ata_controller_primary, ata_drive_slave);
 			io = ata_primary_io;
 			ata_drive = ata_drive_slave;
 			break;
 		case (ata_controller_secondary << 1 | ata_drive_master):
+    		ata_select_drive(ata_controller_secondary, ata_drive_master);
 			io = ata_secondary_io;
 			ata_drive = ata_drive_master;
 			break;
 		case (ata_controller_secondary << 1 | ata_drive_slave):
+    		ata_select_drive(ata_controller_secondary, ata_drive_slave);
 			io = ata_secondary_io;
 			ata_drive = ata_drive_slave;
 			break;
@@ -225,6 +238,10 @@ retry2:	status = inb(io + ata_reg_status);
 
 void ata_read(uint8_t *buf, uint32_t lba, uint32_t numsects, void* dev)
 {
+	if(dev == null)
+	{
+		return;
+	}
 	uint32_t d = ((ata_private_data_t*)((device_t*)dev)->priv)->drive;
 	for(uint32_t i = 0; i < numsects; i++)
 	{

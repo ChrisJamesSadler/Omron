@@ -1,5 +1,5 @@
-#ifndef PIT_H
-#define PIT_H
+#ifndef __PIT_H__
+#define __PIT_H__
 
 extern void pit_init();
 

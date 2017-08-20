@@ -27,9 +27,9 @@ void pit_start_counter (uint32_t freq, uint8_t counter, uint8_t mode)
 	__pit_send_data ((divisor >> 8) & 0xff, 0);
 }
 
-void pit_irq()
+uint32_t pit_irq(uint32_t esp)
 {
-	tasking_switch();
+	return tasking_switch(esp);
 }
 
 void pit_init()

@@ -1,5 +1,5 @@
-#ifndef TEXTSCREEN_H
-#define TEXTSCREEN_H
+#ifndef __TEXTSCREEN_H__
+#define __TEXTSCREEN_H__
 
 #include <common.h>
 

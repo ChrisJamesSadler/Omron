@@ -5,6 +5,7 @@
 #include <hal.h>
 #include <rtc.h>
 #include <shell.h>
+#include <main.h>
 
 
 
@@ -200,7 +201,7 @@ void VGA_init(int width, int height, int bpp){
     
 void shell_main()
 {
-    //VGA_init(320, 200, 8);
+    send_sig(p_id(), SIG_PRI, THREAD_PRIORITY_REALTIME);
     sleep(1000);
     while(1)
     {
@@ -241,10 +242,10 @@ void process_cmd(char* input)
     }
     else if(strcmp(input, "ps"))
     {
-        printf("TID       Name\n");
+        printf("TID       State   Name\n");
         for(int i = 0; i < listlength(thread_list); i++)
         {
-            printf("%d     %s\n", ((thread_t*)thread_list->pointer[i])->tid, ((thread_t*)thread_list->pointer[i])->name);
+            printf("%d     %d       %s\n", ((thread_t*)thread_list->pointer[i])->tid, ((thread_t*)thread_list->pointer[i])->state, ((thread_t*)thread_list->pointer[i])->name);
         }
     }
     else if(strcmp(input, "lshw"))
@@ -261,6 +262,18 @@ void process_cmd(char* input)
         char* c = get_current_datetime_str();
         printf("%s\n", c);
         free(c);
+    }
+    else if(strcmp(input, "lsmod"))
+    {
+        printf("%d Modules Loaded\n", multiboot->mods_count);
+        if (multiboot->mods_count > 0)
+        {
+            for (uint32_t i = 0; i < multiboot->mods_count; ++i )
+            {
+                module_t* mod = (module_t*)((uint32_t*)multiboot->mods_addr + (8 * i));
+                printf("%s\n", mod->name);
+            }
+        }
     }
     else if(strbegins(input, "loop "))
     {
@@ -282,7 +295,7 @@ void process_cmd(char* input)
     }
     else if(strbegins(input, "kill "))
     {
-        uint32_t pid = atoi(input + 5);
+        uint32_t pid = atoi(input + 5, "%d");
         if(pid == 0)
         {
             for(int i = 0; i < listlength(thread_list); i++)
@@ -373,10 +386,23 @@ void process_cmd(char* input)
         }
         else if(strcmp(input, "virus"))
         {
-            for(int i = 0 ; i < 100; i++)
+            list_t* ids = makelist(listlength(thread_list));
+            sleep(1);
+            for(int i = 0; i < listlength(thread_list); i++)
             {
-                send_sig(i, SIG_TERM, 0);
+                thread_t* thread;
+                peekitem(thread_list, i, (uint32_t*)&thread);
+                send_sig(thread->tid, SIG_TERM, 0);
+                listadd(ids, thread->tid);
             }
+            sleep(1);
+            for(int i = 0; i < listlength(ids); i++)
+            {
+                uint32_t id;
+                peekitem(ids, i, &id);
+                send_sig(id, SIG_TERM, 0);
+            }
+            free(ids);
         }
         else
         {

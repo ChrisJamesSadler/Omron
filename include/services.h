@@ -1,5 +1,5 @@
-#ifndef SERVICES_H
-#define SERVICES_H
+#ifndef __SERVICES_H__
+#define __SERVICES_H__
 
 typedef void (*keyboard_event_t)(char aChar, uint8_t released);
 
