@@ -1,5 +1,5 @@
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef __MAIN_H__
+#define __MAIN_H__
 
 #include <common.h>
 
@@ -11,7 +11,7 @@ typedef struct mmap_field_t
     uint32_t length;
     uint32_t length_high;
     uint32_t type;
-} mmap_field_t;
+}__attribute__ ((packed)) mmap_field_t;
 
 typedef struct module_t
 {
@@ -19,7 +19,7 @@ typedef struct module_t
     uint32_t end;
     char* name;
     int32_t reserved;
-} module_t;
+}__attribute__ ((packed)) module_t;
 
 typedef struct multiboot_header_t
 {
@@ -29,7 +29,7 @@ typedef struct multiboot_header_t
     uint32_t boot_device;
     char *cmdline;
     uint32_t mods_count;
-    struct module *mods_addr;
+    struct module_t *mods_addr;
     uint32_t syms[4];
     uint32_t mmap_length;
     struct mmap_field *mmap_addr;
@@ -51,8 +51,9 @@ typedef struct multiboot_header_t
     uint8_t framebuffer_bpp;
     uint8_t framebuffer_type;
     uint8_t color_info[6];
-} multiboot_header_t;
+}__attribute__ ((packed)) multiboot_header_t;
 
 multiboot_header_t* multiboot;
+extern module_t* findMod(char* name);
 
 #endif

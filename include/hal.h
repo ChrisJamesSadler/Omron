@@ -13,17 +13,15 @@
 #define PCI_CONFIG_ADDR                 0xcf8
 #define PCI_CONFIG_DATA                 0xcfC
 
-typedef uint8_t (*device_read_t)(uint8_t* buffer, uint32_t offset, uint32_t len, void* dev);
-typedef uint8_t (*device_write_t)(uint8_t *buffer, uint32_t offset, uint32_t len, void* dev);
+typedef uint8_t (*device_read_t)(uint8_t *buf, uint32_t lba, uint32_t numsects, void* dev);
+typedef uint8_t (*device_write_t)(uint8_t *buf, uint32_t lba, uint32_t numsects, void* dev);
 
 typedef struct device_t
 {
-	char *name;
-	uint32_t unique_id;
-	uint32_t dev_type;
-	struct __fs_t *fs;
-	device_read_t read;
-	device_write_t write;
+	char* name;
+	uint32_t id;
+	uint32_t type;
+	char* path;
 	void *priv;
 } device_t;
 
@@ -48,5 +46,6 @@ list_t* devices;
 
 extern void hal_init();
 extern void deviceadd(device_t* dev);
+extern void getdevice(char* name);
 
 #endif

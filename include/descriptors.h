@@ -1,7 +1,20 @@
-#ifndef DESCRIPTORS_H
-#define DESCRIPTORS_H
+#ifndef __DESCRIPTORS_H__
+#define __DESCRIPTORS_H__
 
 #include <common.h>
+
+#define IRQ_BASE                        0x20
+
+#define IRQ_TIMER                       0x00
+#define IRQ_KEYBOARD                    0x01
+#define IRQ_COM2                        0x03
+#define IRQ_COM1                        0x04
+#define IRQ_FLOPPY                      0x06
+#define IRQ_ATA0                        0x0e
+#define IRQ_ATA1                        0x0f
+
+#define INT_TIMER                       0x20
+#define INT_SPURIOUS                    0xff
 
 struct gdt_entry_struct
 {
@@ -44,7 +57,7 @@ typedef struct registers_t
 	uint32_t eip, cs, eflags, useresp, ss;
 } registers_t;
 
-typedef void (*isr_t)(registers_t *r);
+typedef uint32_t (*isr_t)(uint32_t oldEsp);
 
 extern void descriptors_init();
 extern void set_int(uint8_t num, void* base);
@@ -100,12 +113,12 @@ extern void _isr45();
 extern void _isr46();
 extern void _isr47();
 
-uint32_t oldESP;
 extern gdt_entry_t gdt_entries[5];
 extern gdt_ptr_t   gdt_ptr;
 extern idt_entry_t idt_entries[256];
 extern idt_ptr_t   idt_ptr;
 extern uint32_t interrupt_handlers[256];
 extern uint8_t interrupt_flags[256];
+extern void send_eoi(uint8_t irq);
 
 #endif

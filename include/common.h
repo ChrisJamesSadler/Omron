@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef __COMMON_H__
+#define __COMMON_H__
 
 typedef unsigned long  uint64_t;
 typedef          long  int64_t;
@@ -52,15 +52,19 @@ extern int32_t memcmp(const void* aptr, const void* bptr, uint32_t size);
 extern uint32_t strlen(const char* str);
 extern int32_t strcmp(const void* str1, const void* str2);
 extern int32_t strbegins(const void* str1, const void* str2);
+extern int32_t strends(const void* str1, const void* str2);
 extern int32_t strcpy(char* dest, char* src);
 extern void strcat(char* dest, char* src);
 extern void strtrim(char* str, char c);
+extern int32_t strlastindex(char* str, uint8_t aChar);
 extern void outb(uint16_t port, uint8_t value);
 extern void outw(uint16_t port, uint16_t value);
 extern void outd(uint16_t port, uint32_t value);
+extern void outsl(uint32_t port, void *addr, int cnt);
 extern uint8_t inb(uint16_t port);
 extern uint16_t inw(uint16_t port);
 extern uint32_t ind(uint16_t port);
+extern void insl(uint32_t port, void *addr, int cnt);
 extern void printf(char* str, ...);
 extern uint32_t scanf(const char* format, ...);
 extern mutex_t* mutexcreate();
@@ -72,7 +76,7 @@ extern int32_t listlength(list_t* thelist);
 extern void listadd(list_t* thelist, uint32_t value);
 extern uint32_t poplast(list_t* thelist, uint32_t* output);
 extern uint32_t popfirst(list_t* thelist, uint32_t* output);
-extern uint32_t popitem(list_t* thelist, uint32_t index, uint32_t* output);
+extern uint32_t popitem(list_t* thelist, uint32_t index, void* output);
 uint32_t peekitem(list_t* thelist, int32_t n, uint32_t* output);
 extern void try(void* param);
 extern void completed();

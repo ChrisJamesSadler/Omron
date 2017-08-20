@@ -7,6 +7,9 @@
         "descriptor_tables.h": "c",
         "isr.h": "c",
         "tasking.h": "c",
-        "descriptors.h": "c"
+        "descriptors.h": "c",
+        "rtc.h": "c",
+        "textscreen.h": "c",
+        "cpu.h": "c"
     }
 }
