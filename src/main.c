@@ -13,8 +13,7 @@
 #include <rtc.h>
 #include <cpu.h>
 #include <pic.h>
-
-extern device_t* mainatadevice;
+#include <fs.h>
 
 void main()
 {
@@ -33,6 +32,7 @@ void main()
     hal_init();
     ata_init();
     cpu_init();
+    fs_init();
     services_init();
     create_thread("Shell", (uint32_t)&shell_main);
     while(true) asm("hlt");

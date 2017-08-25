@@ -13,7 +13,7 @@ void memcpy(void *dest, const void *src, uint32_t len)
     if (!((uint32_t)src & 0xFFFFFFFC) && !((uint32_t)dest & 0xFFFFFFFC))
     {
         while (len >= 4)
-    {
+        {
             *plDst++ = *plSrc++;
             len -= 4;
         }
@@ -26,15 +26,28 @@ void memcpy(void *dest, const void *src, uint32_t len)
     {
         *pcDst++ = *pcSrc++;
     }
-    //const uint8_t *sp = (const uint8_t *)src;
-    //uint8_t *dp = (uint8_t *)dest;
-    //for(; len != 0; len--) *dp++ = *sp++;
 }
 
 void memset(void *dest, uint8_t val, uint32_t len)
 {
-    uint8_t *temp = (uint8_t *)dest;
-    for ( ; len != 0; len--) *temp++ = val;
+    long * plDst = (long *) dest;
+    long plSrc = ((long)val << 24) | ((long)val << 16) | ((long)val << 8) | val;
+
+    if (((uint32_t)dest & 0xFFFFFFFC))
+    {
+        while (len >= 4)
+        {
+            *plDst++ = plSrc;
+            len -= 4;
+        }
+    }
+
+    uint8_t * pcDst = (uint8_t *) plDst;
+
+    while (len--)
+    {
+        *pcDst++ = val;
+    }
 }
 
 int32_t memcmp(const void* aptr, const void* bptr, uint32_t size)
@@ -131,7 +144,7 @@ void strcat(char* dest, char* src)
 void strtrim(char* str, char c)
 {
     int len = strlen(str);
-    for(int i = len; i > 0; i--)
+    for(int i = len - 1; i > 0; i--)
     {
         if(str[i] != c)
         {
@@ -153,6 +166,38 @@ int32_t strlastindex(char* str, uint8_t aChar)
         }
     }
     return ret;
+}
+
+list_t* strsplit(char* str, char aChar)
+{
+    list_t* lst = makelist(32);
+    uint32_t index = 0;
+    uint32_t len = 0;
+    char* start = str;
+
+    while(str[index] != 0)
+    {
+        len++;
+        if(str[index] == aChar)
+        {
+            if(len > 1)
+            {
+                char* buf = malloc(len + 1);
+                memcpy(buf, start, len - 1);
+                listadd(lst, (uint32_t)buf);
+            }
+            start = str + index + 1;
+            len = 0;
+        }
+        index++;
+    }
+    if(len > 1)
+    {
+        char* buf = malloc(len + 1);
+        memcpy(buf, start, len);
+        listadd(lst, (uint32_t)buf);
+    }
+    return lst;
 }
 
 void outb(uint16_t port, uint8_t value)
@@ -283,7 +328,8 @@ void handleKeyboard(char c, uint8_t released)
         }
         else
         {
-            if(isalpha(c) || isdigit(c) || c == ' ')
+            //if(isalpha(c) || isdigit(c) || isspecial(c) || c == ' ')
+            if(c != 0)
             {
                 inputBuffer[inputPosition] = c;
                 inputPosition++;
@@ -317,7 +363,7 @@ uint32_t scanf(const char* format, ...)
         inputBuffer = *var;
         while(inputBuffer != 0)
         {
-            asm("hlt");
+            sleep(100);
         }
     }
     else if(strcmp(format, "%d"))
@@ -345,6 +391,7 @@ mutex_t* mutexcreate()
     mutex_t* ptr = (mutex_t*)malloc(sizeof(mutex_t));
     ptr->locked = 0;
     ptr->locker = 0;
+    ptr->waiting = makelist(32);
     listadd(mutexlist, (uint32_t)ptr);
     return ptr;
 }
@@ -355,12 +402,14 @@ void mutexlock(mutex_t* m)
     {
         return;
     }
-	while(m->locked)
+    listadd(m->waiting, p_id());
+	while(m->waiting->pointer[0] != p_id())
     {
-        sleep(1);
+        preempt();
     }
-	m->locked = 1;
-    m->locker = thread_current->tid;
+	m->locked = thread_current->priority;
+    m->locker = p_id();
+    send_sig(p_id(), SIG_PRI, THREAD_PRIORITY_REALTIME);
 }
 
 void mutexunlock(mutex_t* m)
@@ -369,6 +418,8 @@ void mutexunlock(mutex_t* m)
     {
         return;
     }
+    send_sig(p_id(), SIG_PRI, m->locked);
+    popfirst(m->waiting, (uint32_t*)&m->locked);
 	m->locked = 0;
     m->locker = 0;
 }
@@ -542,6 +593,16 @@ uint32_t isalpha(char aChar)
 uint32_t isdigit(char aChar)
 {
     if(aChar >= '0' && aChar <= '9')
+    {
+        return 1;
+    }
+    return 0;
+}
+
+
+uint32_t isspecial(char aChar)
+{
+    if(aChar >= 0x33 && aChar <= 0x35)
     {
         return 1;
     }

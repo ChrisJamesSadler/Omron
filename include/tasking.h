@@ -47,5 +47,6 @@ extern uint32_t is_thread_running(char* name);
 extern uint32_t get_thread_id(char* name);
 extern uint32_t p_id();
 extern char* p_name();
+extern void preempt();
 
 #endif

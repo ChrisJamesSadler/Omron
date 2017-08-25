@@ -12,25 +12,25 @@ uint8_t textscreen_secondary = TUIColourBlack;
 
 void textscreen_clear()
 {
-    /*uint8_t p = textscreen_primary;
-    uint8_t s = textscreen_secondary;
-    textscreen_primary = TUIColourLightGray;
-    textscreen_secondary = TUIColourBlack;
-    for(int y = 0; y < textscreen_height; y++)
+    if(scanf_mutex)
     {
-        for(int x = 0; x < textscreen_width; x++)
-        {
-            textscreen_write_char(' ');
-        }
+        mutexlock(scanf_mutex);
     }
+    uint64_t col = ((TUIColourBlack << 4) | (TUIColourGreen & 0x0F)) << 8;
+    col = (col << 16) | col;
+    col = (col << 24) | col;
+    uint64_t* ptr = (uint64_t*)textscreen_address;
+    for(uint32_t i = 0; i < (textscreen_width * textscreen_height) / 2; i++)
+    {
+        ptr[i] = col;
+    }
+    textscreen_updatecursor();
     textscreen_x = 0;
     textscreen_y = 0;
-    textscreen_primary = p;
-    textscreen_secondary = s;*/
-    
-    textscreen_x = 0;
-    textscreen_y = 0;
-    memset(textscreen_address, 0, (textscreen_width * textscreen_height) * 2);
+    if(scanf_mutex)
+    {
+        mutexunlock(scanf_mutex);
+    }
 }
 
 void textscreen_write_str(char* aStr)
@@ -122,7 +122,6 @@ void textscreen_write_char(char aChar)
 
 void textscreen_updatecursor()
 {
-    return;
     uint16_t offset = (textscreen_width * textscreen_y) + textscreen_x;
     outb(0x3D4, 14);
     outb(0x3D5, offset >> 8);

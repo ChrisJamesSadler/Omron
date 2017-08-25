@@ -22,18 +22,19 @@ typedef          char  int8_t;
 #define ASCII_A_VALU 65
 #define ASCII_F_VALU 70
 
-typedef struct mutex_t
-{
-	uint8_t locked;
-    uint32_t locker;
-} mutex_t;
-
 typedef struct list_t
 {
     uint32_t* pointer;
     int32_t current;
     int32_t length;
 } list_t;
+
+typedef struct mutex_t
+{
+	uint8_t locked;
+    uint32_t locker;
+    list_t* waiting;
+} mutex_t;
 
 typedef struct datetime_t
 {
@@ -57,6 +58,7 @@ extern int32_t strcpy(char* dest, char* src);
 extern void strcat(char* dest, char* src);
 extern void strtrim(char* str, char c);
 extern int32_t strlastindex(char* str, uint8_t aChar);
+extern list_t* strsplit(char* str, char aChar);
 extern void outb(uint16_t port, uint8_t value);
 extern void outw(uint16_t port, uint16_t value);
 extern void outd(uint16_t port, uint32_t value);
@@ -84,6 +86,7 @@ extern uint32_t rnd();
 extern uint32_t rand(uint32_t max);
 extern uint32_t isalpha(char aChar);
 extern uint32_t isdigit(char aChar);
+extern uint32_t isspecial(char aChar);
 extern uint32_t isupper(char aChar);
 extern uint32_t islower(char aChar);
 extern uint32_t ishex(char aChar);
@@ -97,5 +100,6 @@ extern void* malloc(uint32_t sz);
 extern void free(void* mem);
 extern datetime_t* time();
 extern list_t* mutexlist;
+extern mutex_t* scanf_mutex;
 
 #endif

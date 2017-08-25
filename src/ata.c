@@ -5,7 +5,6 @@
 
 uint8_t* ata_buf;
 device_t* mainatadevice;
-uint8_t ata_next = 'a';
 
 void ata_init()
 {
@@ -74,10 +73,6 @@ pm_stat_read:
 		dev->name = str;
 		dev->id = DEVICE_ID_ATA;
 		dev->type = DEVICE_TYPE_BLOCK;
-		dev->path = malloc(10);
-		strcat(dev->path, "/dev/hd");
-		dev->path[strlen(dev->path)] = ata_next;
-		ata_next++;
 		dev->priv = malloc(sizeof(ata_private_data_t));
 		((ata_private_data_t*)dev->priv)->drive = (bus << 1) | drive;
 		mainatadevice = dev;
@@ -246,6 +241,20 @@ void ata_read(uint8_t *buf, uint32_t lba, uint32_t numsects, void* dev)
 	for(uint32_t i = 0; i < numsects; i++)
 	{
 		ata_read_block(buf, lba + i, d);
+		buf += 512;
+	}
+}
+
+void ata_write(uint8_t *buf, uint32_t lba, uint32_t numsects, void* dev)
+{
+	if(dev == null)
+	{
+		return;
+	}
+	uint32_t d = ((ata_private_data_t*)((device_t*)dev)->priv)->drive;
+	for(uint32_t i = 0; i < numsects; i++)
+	{
+		ata_write_block(buf, lba + i, d);
 		buf += 512;
 	}
 }

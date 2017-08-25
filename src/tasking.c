@@ -46,9 +46,11 @@ uint32_t create_thread(char* name, uint32_t addr)
 
 uint32_t create_thread_param(char* name, uint32_t addr, uint32_t param)
 {
+	
     thread_t* p = (thread_t *)malloc(sizeof(thread_t));
 	memset(p, 0, sizeof(thread_t));
-    p->name = name;
+	p->name = malloc(strlen(name) + 1);
+	memcpy(p->name, name, strlen(name));
 	p->notify = __notified;
 	tryagain:;
 	p->tid = 10000 + rand(89999);// ++tid;
@@ -102,7 +104,7 @@ uint32_t create_thread_param(char* name, uint32_t addr, uint32_t param)
 	return p->tid;
 }
 
-void tasking_emergency_countdown()
+/*void tasking_emergency_countdown()
 {
 	sleep(3000);
 	int sec = 10;
@@ -119,7 +121,7 @@ void tasking_emergency()
 	create_thread("PANIC Count", (uint32_t)&tasking_emergency_countdown);
 	PANIC("All Kernel Threads Have Stopped");
 	while(true) asm("hlt");
-}
+}*/
 
 uint32_t tasking_switch(uint32_t oldESP)
 {
@@ -131,10 +133,11 @@ uint32_t tasking_switch(uint32_t oldESP)
 	{
 		if(listlength(thread_list) == 0)
 		{
-			create_thread("Panic", (uint32_t)&tasking_emergency);
+			/*create_thread("Panic", (uint32_t)&tasking_emergency);
 			thread_current = (thread_t*)thread_list->pointer[0];
 			thread_current->priority = THREAD_PRIORITY_REALTIME;
-			oldESP = thread_current->esp;
+			oldESP = thread_current->esp;*/
+			acpi_shutdown();
 		}
 		else
 		{
@@ -185,7 +188,7 @@ void sleep(uint32_t ms)
 	{
 		thread_current->arg = ms;
 		thread_current->state = THREAD_STATE_WAITING_SLEEP;
-		asm ("int $0x20");
+		preempt();
 		while(thread_current->state != THREAD_STATE_ALIVE) { }
 	}
 }
@@ -250,4 +253,9 @@ char* p_name()
 		return 0;
 	}
 	return thread_current->name;
+}
+
+void preempt()
+{
+	asm ("int $0x20");
 }

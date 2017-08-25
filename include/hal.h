@@ -21,7 +21,6 @@ typedef struct device_t
 	char* name;
 	uint32_t id;
 	uint32_t type;
-	char* path;
 	void *priv;
 } device_t;
 

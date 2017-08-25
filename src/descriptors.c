@@ -125,7 +125,7 @@ uint32_t isr_handler(uint32_t esp)
 				{
 					debug("Thread Error Occurred\n");
 					debug("NAME  -- %s\n", thread_current->name);
-					debug("TID   -- %s\n", thread_current->tid);
+					debug("TID   -- %d\n", thread_current->tid);
 					debug("ERROR -- %s\n", system_exceptions[r->int_no]);
 					debug("Registers dump:\n");
 					debug("eax 0x%x ebx 0x%x 0x%ecx 0x%x %edx 0x%x\n", r->eax, r->ebx, r->ecx, r->edx);

@@ -47,5 +47,6 @@ extern void ata_poll(uint16_t io);
 extern void ata_read_block(uint8_t *buf, uint32_t lba, uint32_t ata_drive);
 extern void ata_write_block(uint8_t *buf, uint32_t lba, uint32_t ata_drive);
 extern void ata_read(uint8_t *buf, uint32_t lba, uint32_t numsects, void *dev);
+extern void ata_write(uint8_t *buf, uint32_t lba, uint32_t numsects, void *dev);
 
 #endif
